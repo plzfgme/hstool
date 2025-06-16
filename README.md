@@ -1,0 +1,3 @@
+# hstool
+
+HearthStone Related Utils.
