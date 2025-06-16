@@ -367,7 +367,7 @@ pub const FetchCardByIdResult = struct {
 };
 
 pub const FetchCardByIdParams = struct {
-    card_id: u32,
+    id: u32,
     bearer_token: []const u8,
     locale: []const u8 = "en_US",
 };
@@ -383,7 +383,7 @@ pub fn fetchCardById(
     const url = try std.fmt.bufPrint(
         &url_buf,
         "https://us.api.blizzard.com/hearthstone/cards/{d}?locale={s}",
-        .{ params.card_id, params.locale },
+        .{ params.id, params.locale },
     );
 
     const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});

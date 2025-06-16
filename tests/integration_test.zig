@@ -26,7 +26,7 @@ test "fetchCardById" {
 
     const card = try hstool.api.fetchCardById(allocator, .{
         .bearer_token = token,
-        .card_id = 678,
+        .id = 678,
     });
     defer card.deinit();
 }
