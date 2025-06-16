@@ -447,7 +447,7 @@ test parseCardFromJson {
     try std.testing.expect(card.collectible);
 }
 
-pub const defaultPageSize: i32 = 40;
+pub const default_page_size: i32 = 40;
 
 pub const SearchCardsParams = struct {
     bearer_token: []const u8,
@@ -465,7 +465,7 @@ pub const SearchCardsParams = struct {
     text_filter: ?[]const u8 = null,
     game_mode: ?[]const u8 = null,
     spell_school: ?[]const u8 = null,
-    page_size: ?i32 = defaultPageSize,
+    page_size: ?i32 = default_page_size,
     // Useful only with SearchCardsPaged
     page: ?i32 = null,
 };
@@ -690,7 +690,7 @@ fn searchCardsInternal(
     var current_page: i32 = if (params.page) |p| p else 1;
     var modified_params = params;
     if (modified_params.page_size == null) {
-        modified_params.page_size = defaultPageSize;
+        modified_params.page_size = default_page_size;
     }
 
     while (true) {
