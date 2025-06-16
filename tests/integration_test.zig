@@ -60,3 +60,15 @@ test "searchCards" {
     });
     defer cards.deinit();
 }
+
+test "fetchCardBackById" {
+    const allocator = std.testing.allocator;
+    const token = try hstool.api.getBearerToken(allocator);
+    defer allocator.free(token);
+
+    const card_back = try hstool.api.fetchCardBackById(allocator, .{
+        .bearer_token = token,
+        .id = 155,
+    });
+    defer card_back.deinit();
+}

@@ -765,3 +765,128 @@ pub fn searchCards(
 ) !SearchCardsResult {
     return try searchCardsInternal(allocator, params, true);
 }
+
+const RawCardBack = struct {
+    id: i32,
+    sortCategory: i32,
+    text: []const u8,
+    name: []const u8,
+    image: []const u8,
+    slug: []const u8,
+};
+
+pub const CardBack = struct {
+    id: i32,
+    sort_category: i32,
+    text: []u8,
+    name: []u8,
+    image: []u8,
+    slug: []u8,
+
+    fn fromRaw(allocator: std.mem.Allocator, raw: RawCardBack) !CardBack {
+        return .{
+            .id = raw.id,
+            .sort_category = raw.sortCategory,
+            .text = try allocator.dupe(u8, raw.text),
+            .name = try allocator.dupe(u8, raw.name),
+            .image = try allocator.dupe(u8, raw.image),
+            .slug = try allocator.dupe(u8, raw.slug),
+        };
+    }
+
+    fn deinit(self: CardBack, allocator: std.mem.Allocator) void {
+        allocator.free(self.text);
+        allocator.free(self.name);
+        allocator.free(self.image);
+        allocator.free(self.slug);
+    }
+};
+
+pub const FetchCardBackByIdParams = struct {
+    id: u32,
+    bearer_token: []const u8,
+    locale: []const u8 = "en_US",
+};
+
+pub const FetchCardBackByIdResult = struct {
+    value: CardBack,
+    allocator: std.mem.Allocator,
+
+    pub fn deinit(self: FetchCardBackByIdResult) void {
+        self.value.deinit(self.allocator);
+    }
+};
+
+pub fn fetchCardBackById(allocator: std.mem.Allocator, params: FetchCardBackByIdParams) !FetchCardBackByIdResult {
+    var client = http.Client{ .allocator = allocator };
+    defer client.deinit();
+
+    var url_buf: [128]u8 = undefined;
+    const url = try std.fmt.bufPrint(
+        &url_buf,
+        "https://us.api.blizzard.com/hearthstone/cardbacks/{d}?locale={s}",
+        .{ params.id, params.locale },
+    );
+
+    const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});
+    defer allocator.free(auth_header);
+
+    const uri = try std.Uri.parse(url);
+    const header_buf = try allocator.alloc(u8, 1024);
+    defer allocator.free(header_buf);
+    var req = try client.open(.GET, uri, .{
+        .server_header_buffer = header_buf,
+        .headers = .{
+            .authorization = .{ .override = auth_header },
+        },
+    });
+    defer req.deinit();
+
+    try req.send();
+    try req.finish();
+    try req.wait();
+
+    if (req.response.status != .ok) {
+        return error.HttpRequestFailed;
+    }
+
+    const body = try req.reader().readAllAlloc(allocator, 16 * 1024);
+    defer allocator.free(body);
+
+    return try parseCardBackFromJson(allocator, body);
+}
+
+fn parseCardBackFromJson(allocator: std.mem.Allocator, json_data: []const u8) !FetchCardBackByIdResult {
+    var parsed = try json.parseFromSlice(RawCardBack, allocator, json_data, .{
+        .ignore_unknown_fields = true,
+    });
+    defer parsed.deinit();
+
+    const card_back = try CardBack.fromRaw(allocator, parsed.value);
+
+    return .{
+        .value = card_back,
+        .allocator = allocator,
+    };
+}
+
+test parseCardBackFromJson {
+    const allocator = std.testing.allocator;
+    const json_str =
+        \\{"id":1,"sortCategory":5,"text":"Hearthstone is a very popular game in Pandaria. Official card game of the Shado-Pan! Acquired from achieving Rank 20 in Ranked Play, April 2014.","name":"Pandaria","image":"https://www.example.com/image.png","slug":"1-pandaria"}
+    ;
+
+    const result = try parseCardBackFromJson(allocator, json_str);
+    defer result.deinit();
+
+    const card_back = result.value;
+    try std.testing.expectEqual(1, card_back.id);
+    try std.testing.expectEqual(5, card_back.sort_category);
+    try std.testing.expectEqualStrings(
+        "Hearthstone is a very popular game in Pandaria. Official card game of the Shado-Pan! Acquired from achieving Rank 20 in Ranked Play, April 2014.",
+        card_back.text,
+    );
+    try std.testing.expectEqualStrings("Pandaria", card_back.name);
+    try std.testing.expectEqualStrings("https://www.example.com/image.png", card_back.image);
+    try std.testing.expectEqualStrings("1-pandaria", card_back.slug);
+}
