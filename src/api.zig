@@ -7,7 +7,6 @@ pub const Region = enum {
     eu,
     kr,
     tw,
-    cn,
 
     fn getApiHost(self: Region) []const u8 {
         return switch (self) {
@@ -118,9 +117,17 @@ pub const Metadata = struct {
         };
     }
 
-    fn deinit(self: Metadata, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: Metadata, allocator: std.mem.Allocator) void {
         allocator.free(self.slug);
         allocator.free(self.name);
+    }
+
+    pub fn clone(self: *const Metadata, allocator: std.mem.Allocator) !Metadata {
+        return Metadata{
+            .slug = try allocator.dupe(u8, self.slug),
+            .id = self.id,
+            .name = try allocator.dupe(u8, self.name),
+        };
     }
 };
 
@@ -358,7 +365,7 @@ pub const Card = struct {
         };
     }
 
-    fn deinit(self: Card, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: Card, allocator: std.mem.Allocator) void {
         allocator.free(self.slug);
         allocator.free(self.multi_class_ids);
         allocator.free(self.name);
@@ -372,6 +379,40 @@ pub const Card = struct {
         if (self.image) |img| allocator.free(img);
         if (self.image_gold) |img| allocator.free(img);
         if (self.crop_image) |img| allocator.free(img);
+    }
+
+    pub fn clone(self: *const Card, allocator: std.mem.Allocator) !Card {
+        return Card{
+            .id = self.id,
+            .collectible = self.collectible,
+            .slug = try allocator.dupe(u8, self.slug),
+            .multi_class_ids = try allocator.dupe(i32, self.multi_class_ids),
+            .card_type_id = self.card_type_id,
+            .card_set_id = self.card_set_id,
+            .name = try allocator.dupe(u8, self.name),
+            .text = try allocator.dupe(u8, self.text),
+            .is_zilliax_functional_module = self.is_zilliax_functional_module,
+            .is_zilliax_cosmetic_module = self.is_zilliax_cosmetic_module,
+            .class_id = self.class_id,
+            .faction_id = if (self.faction_id) |ids| try allocator.dupe(i32, ids) else null,
+            .parent_id = self.parent_id,
+            .child_ids = if (self.child_ids) |ids| try allocator.dupe(i32, ids) else null,
+            .copy_of_card_id = if (self.copy_of_card_id) |ids| try allocator.dupe(i32, ids) else null,
+            .keyword_ids = if (self.keyword_ids) |ids| try allocator.dupe(i32, ids) else null,
+            .minion_type_id = self.minion_type_id,
+            .spell_school_id = self.spell_school_id,
+            .rarity_id = self.rarity_id,
+            .health = self.health,
+            .attack = self.attack,
+            .mana_cost = self.mana_cost,
+            .armor = self.armor,
+            .rune_cost = self.rune_cost,
+            .artist_name = if (self.artist_name) |n| try allocator.dupe(u8, n) else null,
+            .flavor_text = if (self.flavor_text) |t| try allocator.dupe(u8, t) else null,
+            .image = if (self.image) |i| try allocator.dupe(u8, i) else null,
+            .image_gold = if (self.image_gold) |i| try allocator.dupe(u8, i) else null,
+            .crop_image = if (self.crop_image) |i| try allocator.dupe(u8, i) else null,
+        };
     }
 };
 
@@ -816,11 +857,22 @@ pub const CardBack = struct {
         };
     }
 
-    fn deinit(self: CardBack, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: CardBack, allocator: std.mem.Allocator) void {
         allocator.free(self.text);
         allocator.free(self.name);
         allocator.free(self.image);
         allocator.free(self.slug);
+    }
+
+    pub fn clone(self: *const CardBack, allocator: std.mem.Allocator) !CardBack {
+        return CardBack{
+            .id = self.id,
+            .sort_category = self.sort_category,
+            .text = try allocator.dupe(u8, self.text),
+            .name = try allocator.dupe(u8, self.name),
+            .image = try allocator.dupe(u8, self.image),
+            .slug = try allocator.dupe(u8, self.slug),
+        };
     }
 };
 
