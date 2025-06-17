@@ -2,6 +2,23 @@ const std = @import("std");
 const json = std.json;
 const http = std.http;
 
+pub const Region = enum {
+    us,
+    eu,
+    kr,
+    tw,
+    cn,
+
+    fn getApiHost(self: Region) []const u8 {
+        return switch (self) {
+            .us => "us.api.blizzard.com",
+            .eu => "eu.api.blizzard.com",
+            .kr => "kr.api.blizzard.com",
+            .tw => "tw.api.blizzard.com",
+        };
+    }
+};
+
 pub fn getBearerToken(allocator: std.mem.Allocator) ![]const u8 {
     var client = http.Client{ .allocator = allocator };
     defer client.deinit();
@@ -148,6 +165,7 @@ pub const MetadataSet = enum {
 pub const FetchMetadataBySetParams = struct {
     set: MetadataSet,
     bearer_token: []const u8,
+    region: Region = .us,
     locale: []const u8 = "en_US",
 };
 
@@ -161,8 +179,8 @@ pub fn fetchMetadataBySet(
     var url_buf: [256]u8 = undefined;
     const url = try std.fmt.bufPrint(
         &url_buf,
-        "https://us.api.blizzard.com/hearthstone/metadata/{s}?locale={s}",
-        .{ params.set.toString(), params.locale },
+        "https://{s}/hearthstone/metadata/{s}?locale={s}",
+        .{ params.region.getApiHost(), params.set.toString(), params.locale },
     );
 
     const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});
@@ -369,6 +387,8 @@ pub const FetchCardByIdResult = struct {
 pub const FetchCardByIdParams = struct {
     id: u32,
     bearer_token: []const u8,
+
+    region: Region = .us,
     locale: []const u8 = "en_US",
 };
 
@@ -382,8 +402,8 @@ pub fn fetchCardById(
     var url_buf: [128]u8 = undefined;
     const url = try std.fmt.bufPrint(
         &url_buf,
-        "https://us.api.blizzard.com/hearthstone/cards/{d}?locale={s}",
-        .{ params.id, params.locale },
+        "https://{s}/hearthstone/cards/{d}?locale={s}",
+        .{ params.region.getApiHost(), params.id, params.locale },
     );
 
     const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});
@@ -451,6 +471,8 @@ pub const default_page_size: i32 = 40;
 
 pub const SearchCardsParams = struct {
     bearer_token: []const u8,
+
+    region: Region = .us,
     locale: []const u8 = "en_US",
     set: ?[]const u8 = null,
     class: ?[]const u8 = null,
@@ -705,8 +727,8 @@ fn searchCardsInternal(
         var url_buf: [1024]u8 = undefined;
         const url = try std.fmt.bufPrint(
             &url_buf,
-            "https://us.api.blizzard.com/hearthstone/cards?{s}",
-            .{query_string},
+            "https://{s}/hearthstone/cards?{s}",
+            .{ params.region.getApiHost(), query_string },
         );
 
         const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});
@@ -805,6 +827,7 @@ pub const CardBack = struct {
 pub const FetchCardBackByIdParams = struct {
     id: u32,
     bearer_token: []const u8,
+    region: Region = .us,
     locale: []const u8 = "en_US",
 };
 
@@ -824,8 +847,8 @@ pub fn fetchCardBackById(allocator: std.mem.Allocator, params: FetchCardBackById
     var url_buf: [128]u8 = undefined;
     const url = try std.fmt.bufPrint(
         &url_buf,
-        "https://us.api.blizzard.com/hearthstone/cardbacks/{d}?locale={s}",
-        .{ params.id, params.locale },
+        "https://{s}/hearthstone/cardbacks/{d}?locale={s}",
+        .{ params.region.getApiHost(), params.id, params.locale },
     );
 
     const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});
