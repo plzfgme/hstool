@@ -18,7 +18,7 @@ pub const Region = enum {
     }
 };
 
-pub fn getBearerToken(allocator: std.mem.Allocator) ![]const u8 {
+pub fn getBearerToken(allocator: std.mem.Allocator) ![]u8 {
     var client = http.Client{ .allocator = allocator };
     defer client.deinit();
 
@@ -50,7 +50,7 @@ const CardApiSettings = struct {
     },
 };
 
-fn extractAccessTokenFromHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
+fn extractAccessTokenFromHtml(allocator: std.mem.Allocator, html: []const u8) ![]u8 {
     const prefix = "cardApiSettings=\"";
     const suffix = "\"";
 
@@ -265,7 +265,7 @@ const RawCard = struct {
     text: []const u8,
     isZilliaxFunctionalModule: bool,
     isZilliaxCosmeticModule: bool,
-    classId: ?i32,
+    classId: ?i32 = null,
     factionId: ?[]const i32 = null,
     parentId: ?i32 = null,
     childIds: ?[]const i32 = null,
