@@ -22,26 +22,10 @@ pub fn getBearerToken(allocator: std.mem.Allocator) ![]u8 {
     var client = http.Client{ .allocator = allocator };
     defer client.deinit();
 
-    const uri = try std.Uri.parse("https://hearthstone.blizzard.com/en-us/cards");
-    const header_buf = try allocator.alloc(u8, 1024);
-    defer allocator.free(header_buf);
-    var req = try client.open(.GET, uri, .{
-        .server_header_buffer = header_buf,
-    });
-    defer req.deinit();
+    const body = try fetchBody(allocator, &client, "https://hearthstone.blizzard.com/en-us/cards", null);
+    defer body.deinit();
 
-    try req.send();
-    try req.finish();
-    try req.wait();
-
-    if (req.response.status != .ok) {
-        return error.HttpRequestFailed;
-    }
-
-    const html = try req.reader().readAllAlloc(allocator, 1024 * 1024);
-    defer allocator.free(html);
-
-    return try extractAccessTokenFromHtml(allocator, html);
+    return try extractAccessTokenFromHtml(allocator, body.items);
 }
 
 const CardApiSettings = struct {
@@ -190,32 +174,10 @@ pub fn fetchMetadataBySet(
         .{ params.region.getApiHost(), params.set.toString(), params.locale },
     );
 
-    const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});
-    defer allocator.free(auth_header);
+    const body = try fetchBody(allocator, &client, url, params.bearer_token);
+    defer body.deinit();
 
-    const uri = try std.Uri.parse(url);
-    const header_buf = try allocator.alloc(u8, 1024);
-    defer allocator.free(header_buf);
-    var req = try client.open(.GET, uri, .{
-        .server_header_buffer = header_buf,
-        .headers = .{
-            .authorization = .{ .override = auth_header },
-        },
-    });
-    defer req.deinit();
-
-    try req.send();
-    try req.finish();
-    try req.wait();
-
-    if (req.response.status != .ok) {
-        return error.HttpRequestFailed;
-    }
-
-    const body = try req.reader().readAllAlloc(allocator, 10 * 1024);
-    defer allocator.free(body);
-
-    return try parseMetadataArrayFromJson(allocator, body);
+    return try parseMetadataArrayFromJson(allocator, body.items);
 }
 
 fn parseMetadataArrayFromJson(allocator: std.mem.Allocator, json_data: []const u8) !FetchMetadataBySetResult {
@@ -450,29 +412,10 @@ pub fn fetchCardById(
     const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});
     defer allocator.free(auth_header);
 
-    const uri = try std.Uri.parse(url);
-    const header_buf = try allocator.alloc(u8, 1024);
-    defer allocator.free(header_buf);
-    var req = try client.open(.GET, uri, .{
-        .server_header_buffer = header_buf,
-        .headers = .{
-            .authorization = .{ .override = auth_header },
-        },
-    });
-    defer req.deinit();
+    const body = try fetchBody(allocator, &client, url, params.bearer_token);
+    defer body.deinit();
 
-    try req.send();
-    try req.finish();
-    try req.wait();
-
-    if (req.response.status != .ok) {
-        return error.HttpRequestFailed;
-    }
-
-    const body = try req.reader().readAllAlloc(allocator, 16 * 1024);
-    defer allocator.free(body);
-
-    return try parseCardFromJson(allocator, body);
+    return try parseCardFromJson(allocator, body.items);
 }
 
 fn parseCardFromJson(allocator: std.mem.Allocator, json_data: []const u8) !FetchCardByIdResult {
@@ -772,32 +715,10 @@ fn searchCardsInternal(
             .{ params.region.getApiHost(), query_string },
         );
 
-        const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});
-        defer allocator.free(auth_header);
+        const body = try fetchBody(allocator, &client, url, params.bearer_token);
+        defer body.deinit();
 
-        const uri = try std.Uri.parse(url);
-        const header_buf = try allocator.alloc(u8, 1024);
-        defer allocator.free(header_buf);
-        var req = try client.open(.GET, uri, .{
-            .server_header_buffer = header_buf,
-            .headers = .{
-                .authorization = .{ .override = auth_header },
-            },
-        });
-        defer req.deinit();
-
-        try req.send();
-        try req.finish();
-        try req.wait();
-
-        if (req.response.status != .ok) {
-            return error.HttpRequestFailed;
-        }
-
-        const body = try req.reader().readAllAlloc(allocator, 100 * 1024);
-        defer allocator.free(body);
-
-        const size = try parseCardsFromJsonInto(allocator, body, &all_cards);
+        const size = try parseCardsFromJsonInto(allocator, body.items, &all_cards);
 
         if (!all_pages or size < modified_params.page_size.?) {
             break;
@@ -903,32 +824,10 @@ pub fn fetchCardBackById(allocator: std.mem.Allocator, params: FetchCardBackById
         .{ params.region.getApiHost(), params.id, params.locale },
     );
 
-    const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{params.bearer_token});
-    defer allocator.free(auth_header);
+    const body = try fetchBody(allocator, &client, url, params.bearer_token);
+    defer body.deinit();
 
-    const uri = try std.Uri.parse(url);
-    const header_buf = try allocator.alloc(u8, 1024);
-    defer allocator.free(header_buf);
-    var req = try client.open(.GET, uri, .{
-        .server_header_buffer = header_buf,
-        .headers = .{
-            .authorization = .{ .override = auth_header },
-        },
-    });
-    defer req.deinit();
-
-    try req.send();
-    try req.finish();
-    try req.wait();
-
-    if (req.response.status != .ok) {
-        return error.HttpRequestFailed;
-    }
-
-    const body = try req.reader().readAllAlloc(allocator, 16 * 1024);
-    defer allocator.free(body);
-
-    return try parseCardBackFromJson(allocator, body);
+    return try parseCardBackFromJson(allocator, body.items);
 }
 
 fn parseCardBackFromJson(allocator: std.mem.Allocator, json_data: []const u8) !FetchCardBackByIdResult {
@@ -964,4 +863,27 @@ test parseCardBackFromJson {
     try std.testing.expectEqualStrings("Pandaria", card_back.name);
     try std.testing.expectEqualStrings("https://www.example.com/image.png", card_back.image);
     try std.testing.expectEqualStrings("1-pandaria", card_back.slug);
+}
+
+fn fetchBody(allocator: std.mem.Allocator, client: *std.http.Client, url: []const u8, bearer_token: ?[]const u8) !std.ArrayList(u8) {
+    var auth_header: ?[]u8 = null;
+    defer {
+        if (auth_header) |h| allocator.free(h);
+    }
+    var body = std.ArrayList(u8).init(allocator);
+    const res = try client.fetch(.{
+        .location = .{ .url = url },
+        .response_storage = .{ .dynamic = &body },
+        .headers = .{
+            .authorization = if (bearer_token) |token| blk: {
+                auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{token});
+                break :blk .{ .override = auth_header.? };
+            } else .{ .default = {} },
+        },
+    });
+    if (res.status != .ok) {
+        return error.HttpRequestFailed;
+    }
+
+    return body;
 }

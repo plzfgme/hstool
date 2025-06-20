@@ -47,9 +47,7 @@ test "searchCardsPaged" {
 }
 
 test "searchCards" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+    const allocator = std.testing.allocator;
     const token = try hstool.api.getBearerToken(allocator);
     defer allocator.free(token);
 
